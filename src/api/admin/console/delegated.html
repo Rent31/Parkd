@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parkd | Delegated object viewer</title>
+  <link rel="stylesheet" href="/console/app.css">
+  <script src="/console/delegated.js" defer></script>
+</head>
+<body>
+  <main class="delegated-page">
+    <header class="delegated-header"><a class="delegated-brand" href="/console/"><span class="garage" aria-hidden="true"><i></i><i></i><i></i></span><strong>parkd<span class="brand-dot">.</span></strong></a><span>DELEGATED ACCESS</span></header>
+    <div class="delegated-content">
+      <div class="eyebrow"><span></span> READ-ONLY METADATA</div>
+      <h1>Object viewer</h1>
+      <p class="delegated-intro">Browse object metadata in the buckets listed on your delegated token. This page does not upload, download, or delete objects.</p>
+      <div id="message" class="notice" role="status" hidden></div>
+      <section id="connect-panel" class="panel"><div class="section-kicker">CONNECTION <span> / 01</span></div><h2>Connect with a scoped token</h2><p>Use a token issued for specific buckets. It stays in this tab's memory and is cleared on disconnect or reload.</p><form id="connect-form" class="delegated-connect"><label for="token">Scoped token</label><div class="connect-input"><input id="token" type="password" autocomplete="off" spellcheck="false" required><button class="dark-button" type="submit">Connect</button></div></form><p class="security-copy">Use HTTPS or a local secure connection. Do not enter a global administrator token here.</p></section>
+      <section id="browser" class="panel" hidden><div class="panel-head"><div><div class="section-kicker">STORAGE <span> / 02</span></div><h2>Browse objects</h2><p>Pages can change during concurrent writes or deletes.</p></div><button id="disconnect" type="button" class="outline-button compact">Disconnect</button></div>
+        <form id="browse-form" class="object-form"><label>Bucket ID<select id="bucket" required></select></label><label>Key prefix<input id="prefix" autocomplete="off" spellcheck="false" placeholder="All keys"></label><button class="dark-button" id="browse" type="submit">Browse</button></form>
+        <div id="objects" class="list-empty" aria-live="polite">Choose Browse to load objects.</div><div class="object-actions"><span id="page-info">No page loaded.</span><button id="next" class="outline-button compact" type="button" disabled>Next page</button></div>
+      </section>
+      <footer><span>PARKD / OBJECT STORAGE</span><span>READ-ONLY METADATA</span></footer>
+    </div>
+  </main>
+</body>
+</html>

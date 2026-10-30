@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parkd | Storage console</title>
+  <link rel="stylesheet" href="/console/app.css">
+  <script src="/console/app.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="/console/"><span class="garage" aria-hidden="true"><i></i><i></i><i></i></span><span>parkd<span class="brand-dot">.</span></span></a>
+    <div class="workspace"><span class="workspace-icon">P</span><span><strong>Parkd console</strong><small>Operator workspace</small></span><span class="workspace-mark">⌄</span></div>
+    <div class="nav-label">WORKSPACE</div>
+    <nav aria-label="Main navigation">
+      <button class="nav active" data-view="overview"><span class="nav-icon">▦</span> Overview <span class="nav-line"></span></button>
+      <button class="nav" data-view="buckets"><span class="nav-icon">▤</span> Buckets</button>
+      <button class="nav" data-view="objects"><span class="nav-icon">▣</span> Objects</button>
+      <button class="nav" data-view="keys"><span class="nav-icon">◇</span> Access keys</button>
+      <button class="nav" data-view="cluster"><span class="nav-icon">▧</span> Cluster</button>
+      <div class="nav-label second">ACCOUNT</div>
+      <button class="nav" data-view="billing"><span class="nav-icon">▥</span> Usage & billing</button>
+    </nav>
+    <div class="sidebar-bottom"><div class="sidebar-note"><span class="note-mark">↗</span><strong>Built for your infrastructure.</strong><p>Keep your data close and your operations in view.</p></div><div class="sidebar-footer">PARKD <span>OBJECT STORAGE</span></div></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div class="breadcrumb">Workspace <span>/</span> <strong id="crumb">Overview</strong></div><div class="top-actions"><span class="connection"><span class="status-dot" id="connection-dot"></span><span id="connection-label">Not connected</span></span><button class="top-button" id="refresh" disabled>↻ <span>Refresh</span></button><button class="avatar" id="disconnect" title="Disconnect" disabled>OP</button></div></header>
+    <div class="content">
+      <div class="page-head"><div><div class="eyebrow"><span></span> STORAGE CONTROL PLANE</div><h1 id="page-title">Overview</h1><p id="page-description">A clear view of your object storage, all in one place.</p></div><button class="primary" id="new-bucket" disabled><span>+</span> Create bucket</button></div>
+      <div class="notice" id="notice" role="status" hidden></div>
+      <section class="connect-panel" id="connect-panel"><div><div class="section-kicker">GET STARTED <span>01 / 01</span></div><h2>Connect your workspace</h2><p>Enter an admin API token to view your cluster. Your token stays in this browser tab's memory and is cleared when you disconnect or reload.</p><form id="connect-form"><label for="token">Admin API token</label><div class="connect-input"><input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your admin token" required><button class="dark-button" type="submit">Connect console <span>↗</span></button></div></form><p class="security-copy">Administrator access only. Use HTTPS or a local connection. Never share this token with customers.</p></div><div class="connect-art" aria-hidden="true"><div class="art-grid"></div><span class="garage art-logo"><i></i><i></i><i></i></span><span class="art-label">YOUR STORAGE.<br>YOUR CONTROL.</span></div></section>
+      <div id="overview-view" class="view">
+        <div class="section-heading"><div><div class="section-kicker">AT A GLANCE <span> / 01</span></div><h2>Storage overview</h2></div><span class="subtle">Live cluster statistics</span></div>
+        <div class="metrics"><article class="metric"><div class="metric-top">Logical storage <span>↗</span></div><div class="metric-value" id="stat-bytes">--</div><div class="metric-foot">Object size before replication</div></article><article class="metric"><div class="metric-top">Objects <span>▧</span></div><div class="metric-value" id="stat-objects">--</div><div class="metric-foot">Across the cluster</div></article><article class="metric"><div class="metric-top">Buckets <span>▤</span></div><div class="metric-value" id="stat-buckets">--</div><div class="metric-foot">API count, up to 1 million</div></article><article class="metric"><div class="metric-top">Cluster health <span>◫</span></div><div class="metric-value health-value" id="stat-health">--</div><div class="metric-foot" id="health-detail">Connect to view status</div></article></div>
+        <div class="overview-grid"><section class="panel bucket-panel"><div class="panel-head"><div><div class="section-kicker">YOUR RESOURCES <span> / 02</span></div><h2>Bucket snapshot</h2><p>First five buckets returned by the API, ordered by ID.</p></div><button class="text-button" data-go="buckets">View all <span>↗</span></button></div><div id="recent-buckets" class="list-empty">Connect to see your buckets.</div></section><section class="panel health-panel"><div class="section-kicker">INFRASTRUCTURE <span> / 03</span></div><h2>Cluster status</h2><p>Availability reported by your connected node.</p><div class="health-display"><div class="health-glyph">▦</div><div><strong id="cluster-summary">Not connected</strong><small id="cluster-subsummary">No cluster data available</small></div></div><div class="line-item"><span>Storage nodes online</span><strong id="nodes-online">--</strong></div><div class="line-item"><span>Partitions with quorum</span><strong id="quorum">--</strong></div><button class="outline-button" data-go="cluster">Explore infrastructure <span>↗</span></button></section></div>
+        <div class="bottom-strip"><span class="strip-icon">↗</span><div><strong>Storage that stays yours.</strong><p>Manage your buckets and access from one place.</p></div><span class="strip-tag">PARKD / OBJECT STORAGE</span></div>
+      </div>
+      <div id="buckets-view" class="view" hidden><section class="panel"><div class="panel-head"><div><div class="section-kicker">STORAGE <span> / 01</span></div><h2>All buckets</h2><p>Showing up to 100 buckets. Usage is logical object size.</p></div><input class="search" id="bucket-search" placeholder="Filter buckets" aria-label="Filter buckets"></div><div id="bucket-list" class="list-empty">Connect to see your buckets.</div></section>
+        <section class="panel permissions-panel"><div class="section-kicker">ACCESS CONTROL <span> / 02</span></div><h2>Bucket permissions</h2><p>Grant or revoke selected permissions for an access key. Choices are limited to the first 100 buckets and keys.</p>
+          <form id="permissions-form" class="permissions-form"><label>Bucket<select id="permission-bucket" required disabled><option value="">Connect to load buckets</option></select></label><label>Access key<select id="permission-key" required disabled><option value="">Connect to load keys</option></select></label><fieldset><legend>Permissions</legend><label><input type="checkbox" name="read"> Read</label><label><input type="checkbox" name="write"> Write</label><label><input type="checkbox" name="owner"> Owner</label></fieldset><div class="permission-actions"><button class="dark-button" type="submit" id="grant-permission" disabled>Grant selected</button><button class="outline-button compact" type="button" id="revoke-permission" disabled>Revoke selected</button></div></form>
+        </section>
+        <section class="panel permissions-panel"><div class="section-kicker">CAPACITY CONTROL <span> / 03</span></div><h2>Bucket quotas</h2><p>Set limits for logical object bytes and object count. Leave a field empty for no limit. Concurrent writes can exceed these limits because checks use distributed counters.</p>
+          <form id="quota-form" class="quota-form"><label>Bucket<select id="quota-bucket" required disabled><option value="">Connect to load buckets</option></select></label><label>Maximum logical bytes<input id="quota-size" inputmode="numeric" autocomplete="off" placeholder="No limit" disabled></label><label>Maximum objects<input id="quota-objects" inputmode="numeric" autocomplete="off" placeholder="No limit" disabled></label><div><button class="dark-button" id="save-quota" type="submit" disabled>Save limits</button></div></form><p id="quota-message" class="quota-message">Select a bucket to view its current limits.</p>
+        </section></div>
+      <div id="objects-view" class="view" hidden><section class="panel"><div class="section-kicker">STORAGE <span> / 01</span></div><h2>Browse objects</h2><p><a href="/console/delegated.html">Open delegated object viewer</a> for bucket-scoped tokens.</p><p>Browse current object metadata in the first 100 buckets. Results are not a snapshot and may change while paging. This view does not download or delete objects.</p>
+        <form id="object-form" class="object-form"><label>Bucket<select id="object-bucket" required disabled><option value="">Connect to load buckets</option></select></label><label>Key prefix<input id="object-prefix" autocomplete="off" spellcheck="false" placeholder="All keys" disabled></label><button class="dark-button" id="object-browse" type="submit" disabled>Browse</button></form>
+        <div id="object-list" class="list-empty" aria-live="polite">Select a bucket to browse objects.</div><div class="object-actions"><span id="object-page-info">No page loaded.</span><button class="outline-button compact" id="object-next" type="button" disabled>Next page</button></div>
+      </section></div>
+      <div id="keys-view" class="view" hidden><section class="panel"><div class="panel-head"><div><div class="section-kicker">ACCESS <span> / 01</span></div><h2>Access keys</h2><p>Showing up to 100 keys. Secrets are not displayed.</p></div><button class="outline-button compact" id="new-key" disabled>+ Create key</button></div><div id="key-list" class="list-empty">Connect to see your keys.</div></section></div>
+      <div id="cluster-view" class="view" hidden><section class="panel"><div class="section-kicker">INFRASTRUCTURE <span> / 01</span></div><h2>Cluster nodes</h2><p>Connection and role as reported by this node.</p><div id="node-list" class="list-empty">Connect to see your nodes.</div></section></div>
+      <div id="billing-view" class="view" hidden><section class="panel billing-panel"><div class="section-kicker">ACCOUNT <span> / 01</span></div><h2>Usage & billing</h2><p>Billing is not configured in this deployment.</p><div class="billing-message"><strong>No billing data available</strong><p>Parkd does not yet collect billable GB-hours, requests, or egress. Current object size is not a bill and must not be used as an invoice.</p></div><div class="line-item"><span>Current logical object size</span><strong id="billing-bytes">--</strong></div><div class="line-item"><span>Billing period</span><strong>Not available</strong></div><div class="line-item"><span>Amount due</span><strong>Not available</strong></div></section></div>
+      <footer><span>© PARKD <span class="footer-divider">/</span> OBJECT STORAGE</span><span>BUILT FOR WHAT'S NEXT <span class="footer-star">✳</span></span></footer>
+    </div>
+  </main>
+</div>
+</body>
+</html>

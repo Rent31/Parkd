@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Parkd</title>
+  <path fill="#1d2822" d="M50 4 96 32v14H4V32z"/>
+  <path fill="#1d2822" d="M4 51h92v11H4zm0 16h92v11H4z"/>
+  <path fill="#ff9f1c" d="M4 83h92v11H4z"/>
+</svg>

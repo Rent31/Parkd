@@ -1,0 +1,226 @@
+use hyper::{Request, Response, StatusCode};
+
+use garage_util::data::*;
+
+use garage_model::s3::object_table::*;
+
+use garage_api_common::helpers::*;
+
+use crate::api_server::{ReqBody, ResBody};
+use crate::error::*;
+use crate::put::next_timestamp;
+use crate::xml as s3_xml;
+
+async fn handle_delete_internal(ctx: &ReqCtx, key: &str) -> Result<(), Error> {
+	let ReqCtx {
+		garage, bucket_id, ..
+	} = ctx;
+	let object = garage
+		.object_table
+		.get(bucket_id, &key.to_string())
+		.await?
+		.ok_or(Error::NoSuchKey)?; // No need to delete
+
+	let del_timestamp = next_timestamp(Some(&object));
+	let del_uuid = gen_uuid();
+
+	let object = Object::new(
+		*bucket_id,
+		key.into(),
+		vec![ObjectVersion {
+			uuid: del_uuid,
+			timestamp: del_timestamp,
+			state: ObjectVersionState::Complete(ObjectVersionData::DeleteMarker),
+		}],
+	);
+
+	garage.object_table.insert(&object).await?;
+
+	Ok(())
+}
+
+pub async fn handle_delete(ctx: ReqCtx, key: &str) -> Result<Response<ResBody>, Error> {
+	match handle_delete_internal(&ctx, key).await {
+		Ok(_) | Err(Error::NoSuchKey) => Ok(Response::builder()
+			.status(StatusCode::NO_CONTENT)
+			.body(empty_body())
+			.unwrap()),
+		Err(e) => Err(e),
+	}
+}
+
+pub async fn handle_delete_objects(
+	ctx: ReqCtx,
+	req: Request<ReqBody>,
+) -> Result<Response<ResBody>, Error> {
+	let body = req.into_body().collect().await?;
+
+	let cmd_xml = roxmltree::Document::parse(std::str::from_utf8(&body)?)?;
+	let cmd = parse_delete_objects_xml(&cmd_xml).ok_or_bad_request("Invalid delete XML query")?;
+
+	if cmd.objects.iter().any(|object| object.version_requested) {
+		return Err(Error::bad_request("Object versioning is not supported"));
+	}
+
+	let mut ret_deleted = Vec::new();
+	let mut ret_errors = Vec::new();
+
+	for obj in cmd.objects.iter() {
+		match handle_delete_internal(&ctx, &obj.key).await {
+			Ok(()) => {
+				if cmd.quiet {
+					continue;
+				}
+				ret_deleted.push(s3_xml::Deleted {
+					key: s3_xml::Value(obj.key.clone()),
+					version_id: None,
+					delete_marker_version_id: None,
+				});
+			}
+			Err(Error::NoSuchKey) => {
+				if cmd.quiet {
+					continue;
+				}
+				// Deleting a non-existent key is a success in S3
+				ret_deleted.push(s3_xml::Deleted {
+					key: s3_xml::Value(obj.key.clone()),
+					version_id: None,
+					delete_marker_version_id: None,
+				});
+			}
+			Err(e) => {
+				ret_errors.push(s3_xml::DeleteError {
+					code: s3_xml::Value(e.aws_code().to_string()),
+					key: Some(s3_xml::Value(obj.key.clone())),
+					message: s3_xml::Value(format!("{}", e)),
+					version_id: None,
+				});
+			}
+		}
+	}
+
+	let xml = s3_xml::to_xml_with_header(&s3_xml::DeleteResult {
+		xmlns: (),
+		deleted: ret_deleted,
+		errors: ret_errors,
+	})?;
+
+	Ok(Response::builder()
+		.header("Content-Type", "application/xml")
+		.body(string_body(xml))?)
+}
+
+struct DeleteRequest {
+	quiet: bool,
+	objects: Vec<DeleteObject>,
+}
+
+struct DeleteObject {
+	key: String,
+	version_requested: bool,
+}
+
+fn parse_delete_objects_xml(xml: &roxmltree::Document) -> Option<DeleteRequest> {
+	let mut ret = DeleteRequest {
+		quiet: false,
+		objects: vec![],
+	};
+
+	let root = xml.root();
+	let delete = root.children().find(|n| n.is_element())?;
+
+	if !delete.has_tag_name("Delete") {
+		return None;
+	}
+
+	for item in delete.children() {
+		// Skip text nodes introduced by formatted XML.
+		if !item.is_element() {
+			// text nodes are allowed only if they contain whitespace characters only
+			if !item.text()?.trim().is_empty() {
+				return None;
+			}
+			continue;
+		}
+
+		if item.has_tag_name("Object") {
+			let key = item.children().find(|e| e.has_tag_name("Key"))?;
+			let key_str = key.text()?;
+			ret.objects.push(DeleteObject {
+				key: key_str.to_string(),
+				version_requested: item.children().any(|e| e.has_tag_name("VersionId")),
+			});
+		} else if item.has_tag_name("Quiet") {
+			ret.quiet = item.text()? == "true";
+		} else {
+			return None;
+		}
+	}
+
+	Some(ret)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn parse_delete_objects_xml_records_version_requests() {
+		let body = r#"<Delete><Object><Key>one</Key></Object><Object><Key>two</Key><VersionId>old</VersionId></Object></Delete>"#;
+		let xml = roxmltree::Document::parse(body).unwrap();
+		let req = parse_delete_objects_xml(&xml).unwrap();
+		assert!(!req.objects[0].version_requested);
+		assert!(req.objects[1].version_requested);
+	}
+
+	#[test]
+	fn parse_delete_objects_xml_with_formatting() {
+		let body = r#"
+			<Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+			    <Object>
+			        <Key>1_746573745f66696c65</Key>
+			    </Object>
+			    <Quiet>true</Quiet>
+			</Delete>
+		"#;
+		let xml = roxmltree::Document::parse(body).expect("valid delete XML");
+		let req = parse_delete_objects_xml(&xml).expect("request should be parsed");
+
+		assert_eq!(req.objects.len(), 1);
+		assert_eq!(req.objects[0].key, "1_746573745f66696c65");
+		assert!(req.quiet);
+	}
+
+	#[test]
+	fn parse_delete_objects_xml_rejects_non_whitespace_text_node() {
+		let body = r#"<Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/">oops<Object><Key>1_746573745f66696c65</Key></Object></Delete>"#;
+		let xml = roxmltree::Document::parse(body).expect("valid XML");
+		let req = parse_delete_objects_xml(&xml);
+		assert!(req.is_none());
+	}
+
+	#[test]
+	fn parse_delete_objects_xml_rejects_pretty_print_with_stray_text() {
+		let body = r#"
+			<Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+			    oops
+			    <Object>
+			        <Key>1_746573745f66696c65</Key>
+			    </Object>
+			</Delete>
+		"#;
+		let xml = roxmltree::Document::parse(body).expect("valid XML");
+		let req = parse_delete_objects_xml(&xml);
+		assert!(req.is_none());
+	}
+
+	#[test]
+	fn parse_delete_objects_xml_accepts_compact_valid_xml() {
+		let body = r#"<Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Object><Key>1_746573745f66696c65</Key></Object><Quiet>false</Quiet></Delete>"#;
+		let xml = roxmltree::Document::parse(body).expect("valid XML");
+		let req = parse_delete_objects_xml(&xml).expect("request should be parsed");
+		assert_eq!(req.objects.len(), 1);
+		assert_eq!(req.objects[0].key, "1_746573745f66696c65");
+		assert!(!req.quiet);
+	}
+}

@@ -1,0 +1,16 @@
+mod cors;
+mod encryption_headers;
+mod list;
+mod multipart;
+mod objects;
+mod permissions;
+mod postobject;
+mod presigned;
+mod quota;
+mod signature_encoding;
+mod simple;
+mod ssec;
+mod streaming_signature;
+mod tenant_boundaries;
+mod version_safety;
+mod website;

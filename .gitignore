@@ -1,0 +1,9 @@
+/target
+/tmp
+/pki
+**/*.rs.bk
+*.swp
+/.direnv
+/parkd-local/
+
+node_modules/

@@ -1,0 +1,61 @@
+groups:
+  - name: parkd-storage
+    rules:
+      - alert: ParkdTargetDown
+        expr: up{job="garage"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Parkd metrics target {{ $labels.instance }} is down"
+          description: "Prometheus cannot scrape the node. Check the node, network, and metrics credentials."
+      - alert: ParkdClusterUnavailable
+        expr: cluster_available{job="garage"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Parkd cluster unavailable from {{ $labels.instance }}"
+          description: "A write quorum is unavailable for at least one partition."
+      - alert: ParkdClusterDegraded
+        expr: cluster_healthy{job="garage"} == 0 and cluster_available{job="garage"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Parkd cluster degraded from {{ $labels.instance }}"
+          description: "At least one storage node is disconnected, but quorum is available."
+      - alert: ParkdDiskSpaceLow
+        expr: garage_local_disk_avail{job="garage"} / garage_local_disk_total{job="garage"} < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Parkd {{ $labels.volume }} disk low on {{ $labels.instance }}"
+          description: "Less than 15 percent of the filesystem is available."
+      - alert: ParkdResyncErrors
+        expr: block_resync_errored_blocks{job="garage"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Parkd resync errors on {{ $labels.instance }}"
+          description: "One or more blocks failed their latest resync. Inspect block errors and node health."
+      - alert: ParkdBlockCorruption
+        expr: increase(block_corruption_counter{job="garage"}[10m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Parkd block corruption detected on {{ $labels.instance }}"
+          description: "A corrupt block was detected during the last ten minutes. Investigate disks and replicas."
+      - alert: ParkdS3ServerErrors
+        expr: |
+          sum by (job, instance) (rate(api_s3_error_counter{job="garage",status_code=~"5.."}[5m]))
+          / sum by (job, instance) (rate(api_s3_request_counter{job="garage"}[5m])) > 0.05
+          and on (job, instance) sum by (job, instance) (rate(api_s3_request_counter{job="garage"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Parkd S3 server error rate high on {{ $labels.instance }}"
+          description: "More than 5 percent of S3 requests returned server errors over five minutes."

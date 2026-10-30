@@ -1,0 +1,54 @@
+rule_files:
+  - parkd-alerts.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'cluster_available{job="garage",instance="node1"}'
+        values: '0+0x12'
+      - series: 'up{job="garage",instance="node1"}'
+        values: '1+0x12'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ParkdClusterUnavailable
+        exp_alerts:
+          - exp_labels:
+              job: garage
+              instance: node1
+              severity: critical
+            exp_annotations:
+              summary: 'Parkd cluster unavailable from node1'
+              description: 'A write quorum is unavailable for at least one partition.'
+  - interval: 1m
+    input_series:
+      - series: 'garage_local_disk_avail{job="garage",instance="node1",volume="data"}'
+        values: '10+0x12'
+      - series: 'garage_local_disk_total{job="garage",instance="node1",volume="data"}'
+        values: '100+0x12'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: ParkdDiskSpaceLow
+        exp_alerts:
+          - exp_labels:
+              job: garage
+              instance: node1
+              volume: data
+              severity: warning
+            exp_annotations:
+              summary: 'Parkd data disk low on node1'
+              description: 'Less than 15 percent of the filesystem is available.'
+  - interval: 1m
+    input_series:
+      - series: 'up{job="garage",instance="node1"}'
+        values: '0+0x12'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ParkdTargetDown
+        exp_alerts:
+          - exp_labels:
+              job: garage
+              instance: node1
+              severity: critical
+            exp_annotations:
+              summary: 'Parkd metrics target node1 is down'
+              description: 'Prometheus cannot scrape the node. Check the node, network, and metrics credentials.'
